@@ -1,0 +1,33 @@
+# {{ ansible_managed }}
+# This file is managed by Ansible.
+# Source: roles/hardening/templates/ssh_jail.conf.j2
+# Variables: roles/hardening/vars/main.yml
+# Apply changes: ansible-playbook site.yml -t hardening_fail2ban
+
+[sshd]
+enabled  = true
+# enabled = activate this jail. fail2ban will start monitoring SSH.
+
+port     = {{ fail2ban_ssh_port | default(ssh_port) }}
+# The port fail2ban watches and bans on.
+# Must match the port SSH actually listens on.
+
+filter   = sshd
+# filter = which regex pattern file to use for parsing log lines.
+# "sshd" refers to /etc/fail2ban/filter.d/sshd.conf which ships
+# with fail2ban and already knows how to parse SSH log messages.
+
+logpath  = /var/log/auth.log
+# The log file fail2ban monitors for failed auth attempts.
+# On Debian/Kali, SSH logs here. On RedHat it would be
+# /var/log/secure -- another reason to use per-OS task files
+# in a cross-platform role.
+
+maxretry = {{ fail2ban_maxretry }}
+# Ban after this many failures. Value from vars/main.yml.
+
+findtime = {{ fail2ban_findtime }}
+# Count failures within this window (seconds). From vars/main.yml.
+
+bantime  = {{ fail2ban_bantime }}
+# Ban duration in seconds. From vars/main.yml.
