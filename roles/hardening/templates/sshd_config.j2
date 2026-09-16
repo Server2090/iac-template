@@ -3,10 +3,8 @@
 # All values come from roles/hardening/vars/main.yml.
 # To apply changes: ansible-playbook site.yml -t hardening_ssh
 #
-# This is a Jinja2 template. The {{ variable }} syntax is replaced
 # with real values from vars/main.yml when Ansible renders it.
 # The rendered output is a plain text config file — sshd never
-# sees the {{ }} syntax, only the final values.
 
 # ── Network ───────────────────────────────────────────────────────
 Port {{ ssh_port }}
