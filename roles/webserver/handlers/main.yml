@@ -1,0 +1,23 @@
+---
+# roles/webserver/handlers/main.yml
+# Handlers for the webserver role.
+
+- name: Reload Nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+    # reloaded = send SIGHUP to the running Nginx process.
+    # Nginx re-reads its config files and applies changes WITHOUT
+    # dropping existing connections. This is the correct way to
+    # apply config changes to a live web server.
+    # Compare to "restarted" which stops and starts the process —
+    # any open connections would be dropped during the restart gap.
+
+- name: Restart Nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: restarted
+    # restarted = full stop and start. Used for changes that cannot
+    # be applied with a reload (e.g. changing the listening port).
+    # Not notified by any current task — here as a resource for
+    # students to use in the challenge tasks if needed.

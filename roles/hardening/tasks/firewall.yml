@@ -1,0 +1,50 @@
+---
+# roles/hardening/tasks/firewall.yml
+# Sets up UFW (Uncomplicated Firewall) baseline rules.
+# UFW is a frontend for iptables — the Linux kernel's built-in
+# packet filtering. UFW makes the rules human-readable and
+# ensures they persist across reboots automatically.
+#
+# Baseline policy:
+#   - Block ALL incoming traffic by default
+#   - Allow ALL outgoing traffic (so apt, browsers, etc. still work)
+#   - Then punch specific holes for what we need (SSH, later HTTP)
+
+- name: Set UFW default policy — deny all incoming
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+    # deny = silently drop all inbound packets that do not match
+    # an explicit allow rule. "reject" would send an ICMP error
+    # back to the sender — deny is stealthier and cheaper.
+
+- name: Set UFW default policy — allow all outgoing
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+    # allow = permit all outbound connections without restriction.
+    # This is safe for a workstation/lab machine and allows apt,
+    # DNS, NTP, and everything else to work normally.
+
+- name: Allow SSH through the firewall
+  community.general.ufw:
+    rule: allow
+    port: "{{ ufw_ssh_port }}"
+    # The port to open — comes from vars/main.yml.
+    # References ssh_port so both settings stay in sync automatically.
+    proto: tcp
+    # SSH uses TCP (not UDP). Specifying the protocol makes the
+    # rule more precise — do not open UDP 22 unnecessarily.
+    comment: "SSH — managed by Ansible"
+    # Comments appear in "ufw status verbose" output.
+    # Makes it easy to see what each rule is for without reading code.
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+    # enabled = turn UFW on and make rules active.
+    # This is separate from the policy/rule tasks above because
+    # UFW can have rules defined while being disabled.
+    # Enabling it last means all rules are in place before
+    # traffic starts being filtered — no window where UFW is
+    # active but SSH is not yet allowed.

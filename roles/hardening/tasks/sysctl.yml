@@ -1,0 +1,44 @@
+---
+# roles/hardening/tasks/sysctl.yml
+# Applies kernel hardening parameters via sysctl.
+# sysctl controls kernel parameters at runtime — no reboot required.
+# Parameters are written to /etc/sysctl.d/ so they persist across reboots.
+#
+# All values come from sysctl_hardening in vars/main.yml.
+# To add or change a kernel parameter, edit vars/main.yml only —
+# never hardcode values in this task file.
+
+- name: Apply kernel hardening parameters
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    # item.key = the sysctl parameter name (e.g. net.ipv4.tcp_syncookies)
+    # We loop over every key/value pair in the sysctl_hardening dict.
+
+    value: "{{ item.value | string }}"
+    # item.value = the value to set (e.g. 1, 0)
+    # | string = convert to string type.
+    # sysctl values are always strings in the kernel — this filter
+    # prevents Ansible from passing an integer where a string is needed,
+    # which would cause a type mismatch error on some Ansible versions.
+
+    state: present
+    # present = set this parameter. "absent" would remove it.
+
+    sysctl_file: /etc/sysctl.d/99-cs3-hardening.conf
+    # Write to a dedicated file instead of /etc/sysctl.conf.
+    # This keeps our changes isolated from the system default.
+    # The 99- prefix means this file loads last — our values
+    # override anything set by earlier files.
+    # Easy to identify, easy to remove if needed.
+
+    reload: true
+    # reload: true = apply the change immediately to the running kernel
+    # without needing a reboot. Equivalent to running "sysctl --system"
+    # after writing the file.
+
+  loop: "{{ sysctl_hardening | dict2items }}"
+  # sysctl_hardening is a dictionary in vars/main.yml.
+  # dict2items converts it to a list of {key, value} pairs
+  # so we can loop over it with "item.key" and "item.value".
+  # This means adding a new sysctl parameter only requires adding
+  # one line to vars/main.yml — not touching this task file at all.

@@ -1,0 +1,63 @@
+# ansible-lab/.gitignore
+# Files and directories Git should never track.
+# These fall into two categories:
+#   1. Secrets — must never reach a remote repository
+#   2. Generated files — can always be recreated, no value in tracking them
+
+# ── Ansible runtime files ─────────────────────────────────────────
+*.retry
+# Ansible writes a .retry file listing failed hosts when a playbook
+# fails. It is a convenience file for re-running against failed hosts
+# only — it has no value in version history.
+
+.vault_pass
+vault_pass.txt
+# If you use ansible-vault to encrypt secrets, the vault password
+# file must NEVER be committed. This is the equivalent of committing
+# your encryption key alongside your encrypted files.
+
+# ── Secrets ───────────────────────────────────────────────────────
+*.sops.yml
+# SOPS-encrypted files. If you add SOPS to this project later,
+# the encrypted files are safe to commit (they are ciphertext),
+# but this line serves as a reminder to be explicit about it.
+# Remove this line only when you have SOPS properly configured.
+
+*secret*
+*password*
+*credentials*
+# Catch-all for any accidentally created files with these names.
+
+# ── SSH keys ──────────────────────────────────────────────────────
+*.pem
+*.key
+id_rsa
+id_ed25519
+# Private key files. A private key committed to a repo — even a
+# private repo — is compromised and must be rotated immediately.
+
+# ── Editor and OS junk ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+# Editor temp files and OS metadata. These vary per person and
+# have no meaning in the project — tracking them causes noisy diffs.
+
+# ── Python ────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.python-version
+venv/
+.venv/
+# Python bytecode and virtual environment directories.
+# These are always machine-specific and can be recreated.
+
+# ── Logs ─────────────────────────────────────────────────────────
+*.log
+# Log files grow unboundedly and contain runtime data, not config.
+# Track the config that generates logs, not the logs themselves.

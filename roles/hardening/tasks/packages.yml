@@ -1,0 +1,36 @@
+---
+# roles/hardening/tasks/packages.yml
+# Installs the tools that the rest of the hardening role depends on.
+# This runs first so every subsequent task can assume these packages exist.
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    # update_cache: true  = run "apt update" before installing.
+    #   Without this, apt might install old cached versions of packages.
+    # cache_valid_time: 3600 = only actually update if the cache is
+    #   older than 3600 seconds (1 hour). If you run the playbook
+    #   twice within an hour, the second run skips the update step
+    #   and finishes faster. This is what makes the role idempotent
+    #   on the packages step.
+
+- name: Install hardening packages
+  ansible.builtin.apt:
+    name:
+      - ufw
+        # UFW = Uncomplicated Firewall. A user-friendly frontend
+        # for iptables (the Linux kernel's packet filtering system).
+        # We use this to set our firewall rules.
+      - fail2ban
+        # fail2ban watches log files for repeated failed login
+        # attempts and automatically bans the offending IP using
+        # iptables rules. Protects SSH from brute force attacks.
+      - openssh-server
+        # The SSH server daemon. On Kali this is usually installed
+        # but not always enabled — we install it explicitly so we
+        # can guarantee it exists before we harden its config.
+    state: present
+    # state: present = install if not already installed.
+    # If the package is already there, this task does nothing
+    # (idempotent — safe to run repeatedly).

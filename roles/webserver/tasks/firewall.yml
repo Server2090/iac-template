@@ -1,0 +1,19 @@
+---
+# roles/webserver/tasks/firewall.yml
+# Opens the HTTP port in UFW so the web server is reachable.
+# The hardening role already set up UFW with default deny-in.
+# This task adds one more allow rule on top — it does NOT reset
+# or overwrite the existing firewall config. That layering is
+# intentional: each role is responsible for its own ports only.
+
+- name: Allow HTTP traffic through UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ nginx_port }}"
+    # nginx_port comes from this role's vars/main.yml.
+    # Referencing a variable (not hardcoding 80) means if you
+    # change the port Nginx listens on, the firewall rule follows
+    # automatically — one change in one place.
+    proto: tcp
+    # HTTP uses TCP. We do not open UDP 80.
+    comment: "HTTP — Nginx — managed by Ansible"

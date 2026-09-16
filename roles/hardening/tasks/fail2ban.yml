@@ -1,0 +1,64 @@
+---
+# roles/hardening/tasks/fail2ban.yml
+# Configures fail2ban with an SSH jail.
+# fail2ban watches /var/log/auth.log for repeated SSH failures
+# and automatically bans the offending IP via iptables/ufw.
+# This works alongside the SSH MaxAuthTries setting — SSH disconnects
+# quickly, fail2ban bans the IP so it cannot keep reconnecting.
+
+- name: Write fail2ban SSH jail configuration
+  ansible.builtin.copy:
+    # copy module writes literal content to a file.
+    # We use copy (not template) here because the content is simple
+    # enough to write inline — no Jinja2 variables in the file itself.
+    # (The variable values are already resolved by the time Ansible
+    # processes this task, so we embed them directly using {{ }}.)
+    dest: /etc/fail2ban/jail.d/ssh.conf
+    # jail.d/ is the directory for per-service jail config files.
+    # fail2ban reads all .conf files here and merges them.
+    # Putting our SSH jail here (not in jail.conf) means we do not
+    # overwrite fail2ban's default configuration — we add on top of it.
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by Ansible — do not edit manually.
+      # Changes belong in roles/hardening/vars/main.yml.
+      # Apply changes: ansible-playbook site.yml -t hardening_fail2ban
+
+      [sshd]
+      enabled  = true
+      # enabled = activate this jail. fail2ban will start monitoring SSH.
+
+      port     = {{ fail2ban_ssh_port | default(ssh_port) }}
+      # The port fail2ban watches and bans on.
+      # Must match the port SSH actually listens on.
+
+      filter   = sshd
+      # filter = which regex pattern file to use for parsing log lines.
+      # "sshd" refers to /etc/fail2ban/filter.d/sshd.conf which ships
+      # with fail2ban and already knows how to parse SSH log messages.
+
+      logpath  = /var/log/auth.log
+      # The log file fail2ban monitors for failed auth attempts.
+      # On Debian/Kali, SSH logs here. On RedHat it would be
+      # /var/log/secure — another reason to use per-OS task files
+      # in a cross-platform role.
+
+      maxretry = {{ fail2ban_maxretry }}
+      # Ban after this many failures. Value from vars/main.yml.
+
+      findtime = {{ fail2ban_findtime }}
+      # Count failures within this window (seconds). From vars/main.yml.
+
+      bantime  = {{ fail2ban_bantime }}
+      # Ban duration in seconds. From vars/main.yml.
+
+  notify: Restart fail2ban
+  # Restart fail2ban so it picks up the new jail config.
+
+- name: Enable and start fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: started
+    enabled: true

@@ -1,0 +1,45 @@
+---
+# roles/hardening/handlers/main.yml
+# Handlers are tasks that only run when notified by another task.
+# They always run AFTER all regular tasks have finished — never
+# in the middle of a play. If multiple tasks notify the same handler,
+# it only runs once.
+#
+# This is important for services: if 3 different tasks all modify
+# SSH config files and notify "Restart SSH", SSH only restarts
+# once at the end, not 3 times. Fewer restarts = fewer gaps in
+# service availability.
+#
+# A handler only runs if the task that notified it reported "changed".
+# If the config was already correct and the task reported "ok",
+# the handler is skipped. This is another form of idempotency.
+
+- name: Restart SSH
+  ansible.builtin.systemd:
+    name: ssh
+    # Kali/Debian: the SSH service unit is named "ssh", not "sshd".
+    state: restarted
+    # restarted = stop then start. Picks up the new sshd_config.
+    # "reloaded" also works for sshd (it re-reads config without
+    # dropping existing sessions) but restarted is more reliable
+    # across all versions and config changes.
+
+- name: Restart fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: restarted
+    # Restart so fail2ban reads the new jail config in jail.d/ssh.conf.
+
+- name: Update GRUB
+  ansible.builtin.command:
+    cmd: update-grub
+    # update-grub regenerates /boot/grub/grub.cfg from /etc/default/grub.
+    # Must run after any change to /etc/default/grub for the change
+    # to actually take effect at the next boot.
+    # The GRUB bootloader reads grub.cfg at boot — not grub.default directly.
+  changed_when: true
+  # changed_when: true = always report this as changed.
+  # Normally Ansible marks command tasks as changed even if they did
+  # nothing. Here we accept that — update-grub is fast and harmless
+  # to run, and it only runs when notified (i.e. when the GRUB config
+  # actually changed).

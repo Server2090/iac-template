@@ -1,0 +1,16 @@
+---
+# roles/webserver/tasks/packages.yml
+# Installs Nginx from the system package manager.
+
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+    # nginx = the web server package. This pulls in the full nginx
+    # package with all standard modules. In production you might
+    # use "nginx-light" or "nginx-extras" depending on what modules
+    # you need, but "nginx" is the right default for most cases.
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+    # Same caching logic as the hardening packages task —
+    # only refresh the apt cache if it is older than 1 hour.

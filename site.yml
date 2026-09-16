@@ -1,0 +1,55 @@
+---
+# ansible-lab/site.yml
+# Master playbook for the CS3 IaC lab.
+#
+# This is the entry point — the single file you run to apply
+# everything. It tells Ansible which hosts to target and which
+# roles to apply to them, in order.
+#
+# Run the full playbook (dry run first — always):
+#   ansible-playbook site.yml --check --diff
+#
+# Run for real:
+#   ansible-playbook site.yml
+#
+# Run only the hardening role:
+#   ansible-playbook site.yml --tags hardening
+#
+# Run only the webserver role:
+#   ansible-playbook site.yml --tags webserver
+
+# ── Play 1: Harden the local machine ──────────────────────────────
+# "hosts: all" means run against every host in our inventory.
+# Our inventory only lists localhost, so this runs locally.
+# "connection: local" means do not use SSH — run directly on this
+# machine. This is what makes localhost targeting work without
+# needing SSH keys set up.
+- name: Harden the local Kali machine
+  hosts: all
+  connection: local
+  become: true
+  # become: true = run tasks as root (via sudo).
+  # Without this, tasks that modify system files will fail
+  # with a permission denied error.
+  gather_facts: true
+  # gather_facts: true = Ansible runs the setup module first,
+  # which collects information about the machine — OS family,
+  # hostname, IP addresses, CPU count, etc.
+  # Our tasks reference ansible_facts to make decisions,
+  # so this must be true.
+  roles:
+    - role: hardening
+      tags: hardening
+
+# ── Play 2: Deploy the web server ─────────────────────────────────
+# Runs after hardening so the firewall is already in place.
+# We add the HTTP port in the webserver role on top of the
+# baseline that hardening already set.
+- name: Deploy Nginx web server
+  hosts: all
+  connection: local
+  become: true
+  gather_facts: true
+  roles:
+    - role: webserver
+      tags: webserver

@@ -1,0 +1,48 @@
+---
+# roles/hardening/tasks/main.yml
+# Entry point for the hardening role.
+# Includes task files in order — the order matters because each
+# step depends on what came before it.
+#
+# Order explanation:
+#   1. packages  — install tools before we try to configure them
+#   2. sysctl    — kernel hardening before network services start
+#   3. ipv6      — disable IPv6 before firewall rules are written
+#   4. ssh       — harden SSH config
+#   5. fail2ban  — brute force protection after SSH is configured
+#   6. firewall  — firewall last, after all services are configured
+#                  so we know exactly what ports to open
+#   7. motd      — cosmetic, always last
+#
+# Each include_tasks pulls in a separate file.
+# This keeps tasks/main.yml short and readable — you can see
+# the full flow at a glance without scrolling through hundreds
+# of lines of task definitions.
+
+- name: Install required packages
+  ansible.builtin.include_tasks: packages.yml
+  tags: [hardening, hardening_packages]
+
+- name: Apply kernel hardening (sysctl)
+  ansible.builtin.include_tasks: sysctl.yml
+  tags: [hardening, hardening_sysctl]
+
+- name: Disable IPv6
+  ansible.builtin.include_tasks: ipv6.yml
+  tags: [hardening, hardening_ipv6]
+
+- name: Harden SSH configuration
+  ansible.builtin.include_tasks: ssh.yml
+  tags: [hardening, hardening_ssh]
+
+- name: Configure fail2ban
+  ansible.builtin.include_tasks: fail2ban.yml
+  tags: [hardening, hardening_fail2ban]
+
+- name: Configure UFW firewall
+  ansible.builtin.include_tasks: firewall.yml
+  tags: [hardening, hardening_firewall]
+
+- name: Set login banner
+  ansible.builtin.include_tasks: motd.yml
+  tags: [hardening, hardening_motd]

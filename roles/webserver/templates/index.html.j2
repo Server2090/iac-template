@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<!--
+  Managed by Ansible — do not edit manually.
+  Changes belong in roles/webserver/vars/main.yml (for variables)
+  or roles/webserver/templates/index.html.j2 (for structure/content).
+  Apply changes: ansible-playbook site.yml -t webserver_configure
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ nginx_index_page_title }}</title>
+    <!--
+      {{ nginx_index_page_title }} is a Jinja2 variable.
+      Ansible replaces it with the value from vars/main.yml
+      when rendering this template. The browser never sees {{ }}.
+    -->
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            max-width: 600px;
+            background-color: #161b22;
+        }
+        h1 { color: #58a6ff; font-size: 2rem; margin-bottom: 1rem; }
+        .badge {
+            display: inline-block;
+            background: #238636;
+            color: #fff;
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+        p { color: #8b949e; line-height: 1.6; margin-bottom: 1rem; }
+        .details {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #0d1117;
+            border-radius: 4px;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+        .details span { color: #58a6ff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ nginx_index_page_title }}</h1>
+        <div class="badge">&#9679; Deployed by Ansible</div>
+        <p>This page was deployed by an Ansible playbook as part of the CS3 Infrastructure as Code lab.</p>
+        <p>Every line of configuration that built this server is tracked in version control.</p>
+        <div class="details">
+            <p><span>Server:</span> {{ ansible_hostname }}</p>
+            <!--
+              ansible_hostname is a "magic variable" — Ansible collects
+              it automatically from the target machine via gather_facts.
+              No need to define it in vars/main.yml — it is always available.
+            -->
+            <p><span>OS:</span> {{ ansible_distribution }} {{ ansible_distribution_version }}</p>
+            <p><span>Web server:</span> Nginx</p>
+            <p><span>Port:</span> {{ nginx_port }}</p>
+            <p><span>Document root:</span> {{ nginx_document_root }}</p>
+        </div>
+    </div>
+</body>
+</html>

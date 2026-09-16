@@ -1,0 +1,36 @@
+---
+# roles/hardening/tasks/ipv6.yml
+# Disables IPv6 system-wide via two methods:
+#   1. sysctl  — takes effect immediately on the running system
+#   2. GRUB    — takes effect at every boot via a kernel parameter
+# Both are needed: sysctl handles now, GRUB handles after reboot.
+# This directly mirrors what CS3-Infra's common role does on the
+# production Proxmox server.
+
+- name: Disable IPv6 via GRUB kernel parameters
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    # The GRUB bootloader config file.
+    # This file controls what kernel parameters are passed at boot time.
+
+    regexp: '^GRUB_CMDLINE_LINUX='
+    # regexp = find the line that starts with GRUB_CMDLINE_LINUX=
+    # This is a regular expression. ^ means "start of line."
+    # lineinfile finds the FIRST line matching this pattern
+    # and replaces it with the "line" value below.
+
+    line: 'GRUB_CMDLINE_LINUX="ipv6.disable=1"'
+    # Replace the matched line with this.
+    # ipv6.disable=1 is a kernel boot parameter that disables
+    # IPv6 at the kernel module level before any interfaces come up.
+    # This is the most complete form of IPv6 disabling.
+
+    backup: true
+    # Keep a timestamped backup of /etc/default/grub before editing.
+    # Safety net — if something goes wrong you can restore it.
+
+  notify: Update GRUB
+  # "notify" triggers a handler — see handlers/main.yml.
+  # The handler runs "update-grub" to regenerate the GRUB config
+  # from /etc/default/grub. This only runs if this task changed
+  # the file (idempotent — no unnecessary update-grub on reruns).

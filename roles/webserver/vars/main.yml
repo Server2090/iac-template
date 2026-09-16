@@ -1,0 +1,30 @@
+---
+# roles/webserver/vars/main.yml
+# All configuration for the webserver role.
+# Change values here — never in task files.
+
+# ── Nginx ─────────────────────────────────────────────────────────
+nginx_port: 80
+# The port Nginx listens on for HTTP traffic.
+# Also used by the firewall task to open the correct port.
+# If you change this, the firewall rule updates automatically
+# because both read from this same variable.
+
+nginx_server_name: "cs3.lab"
+# The hostname this virtual host responds to.
+# In a real deployment this would match a DNS record.
+# In this lab it is just a label — the site is reachable by IP.
+
+nginx_site_name: "cs3lab"
+# The filename used for the Nginx site config in sites-available/
+# and the symlink in sites-enabled/.
+# Keep this short and lowercase — it becomes a filename.
+
+nginx_document_root: "/var/www/cs3lab"
+# The directory Nginx serves files from.
+# We create this directory and deploy an index.html into it.
+# In production this would be your application or website files.
+
+nginx_index_page_title: "CS3 Cybersecurity Club"
+# The <title> and <h1> shown on the deployed index page.
+# Change this to customise the landing page without editing HTML directly.

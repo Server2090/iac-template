@@ -1,0 +1,32 @@
+---
+# roles/hardening/tasks/motd.yml
+# Sets the login banner (Message of the Day).
+# The MOTD is displayed to users when they log in via SSH or console.
+# In a real environment this carries a legal warning that the system
+# is authorized use only — important for incident response and legal
+# proceedings. Here it identifies the machine as a CS3 lab system.
+#
+# /etc/motd      = shown after login (the actual message)
+# /etc/issue     = shown BEFORE login on the console
+# /etc/issue.net = shown BEFORE login on SSH connections
+
+- name: Write login banner to /etc/motd
+  ansible.builtin.copy:
+    dest: /etc/motd
+    content: "{{ motd_banner }}"
+    # motd_banner is defined in vars/main.yml.
+    # The | (pipe) in YAML means preserve newlines —
+    # the multi-line banner comes through exactly as written.
+    owner: root
+    group: root
+    mode: "0644"
+    # 0644 = root can read/write, everyone else can only read.
+    # The motd must be world-readable so it appears for all users.
+
+- name: Write pre-login banner to /etc/issue.net
+  ansible.builtin.copy:
+    dest: /etc/issue.net
+    content: "{{ motd_banner }}"
+    owner: root
+    group: root
+    mode: "0644"

@@ -1,0 +1,57 @@
+---
+# roles/hardening/tasks/ssh.yml
+# Hardens the SSH server configuration by writing a new sshd_config.
+# Uses a Jinja2 template so all values stay in vars/main.yml.
+#
+# IMPORTANT: This runs AFTER packages.yml installs openssh-server.
+# If openssh-server is not installed, there is no /etc/ssh/sshd_config
+# to write to and no sshd service to restart.
+
+- name: Enable and start SSH service
+  ansible.builtin.systemd:
+    name: ssh
+    # On Kali/Debian the SSH service is called "ssh" (not "sshd").
+    # This is a Debian convention — the actual binary is still sshd.
+    state: started
+    # started = ensure the service is running right now.
+    enabled: true
+    # enabled = ensure the service starts automatically on boot.
+    # Without this, SSH works now but disappears after a reboot.
+
+- name: Write hardened sshd_config from template
+  ansible.builtin.template:
+    src: sshd_config.j2
+    # src = the Jinja2 template file in roles/hardening/templates/
+    # Ansible finds it automatically in the templates/ directory
+    # of the current role — no full path needed.
+
+    dest: /etc/ssh/sshd_config
+    # dest = where on the target machine to write the rendered file.
+    # This replaces the existing sshd_config entirely.
+
+    owner: root
+    group: root
+    mode: "0600"
+    # 0600 = read and write for root only.
+    # sshd checks file permissions before reading its config.
+    # If permissions are too open (e.g. 0644 — world-readable),
+    # sshd refuses to start as a security measure.
+
+    backup: true
+    # Keep a timestamped backup of the old sshd_config before replacing.
+
+    validate: /usr/sbin/sshd -t -f %s
+    # validate runs this command against the NEW file BEFORE writing it.
+    # "sshd -t" = test mode: parse the config and check for syntax errors.
+    # "-f %s" = %s is replaced with a temporary copy of the new file.
+    # If sshd -t returns an error, Ansible aborts the task and leaves
+    # the existing working sshd_config untouched.
+    # This is a critical safety measure — a broken sshd_config with
+    # no validate would lock you out of SSH with no recovery path.
+
+  notify: Restart SSH
+  # Trigger the "Restart SSH" handler if the config changed.
+  # The handler restarts sshd to apply the new settings.
+  # If the config is identical to what's already on disk,
+  # this task reports "ok" (not "changed") and the handler
+  # does NOT run — another example of idempotency.

@@ -1,0 +1,146 @@
+---
+# roles/hardening/vars/main.yml
+# All configuration values for the hardening role live here.
+# This is the ONLY file you need to edit for routine changes.
+# Task files read from these variables — they contain no
+# hardcoded values. This pattern is called "config-driven" and
+# is directly mirrored from the CS3-Infra common role.
+
+# ── SSH hardening ─────────────────────────────────────────────────
+ssh_port: 22
+# The port SSH listens on.
+# 22 is the standard port. In a real deployment you might change
+# this to a non-standard port as a weak deterrent, but since
+# UFW restricts who can reach it, the port number matters less
+# than the firewall rules.
+
+ssh_permit_root_login: "no"
+# "no"  = root cannot SSH in at all (correct for a workstation/lab VM)
+# "prohibit-password" = root can use a key but not a password
+#   (what CS3-Infra uses because Ansible connects as root)
+# "yes" = never do this in production
+
+ssh_password_authentication: "no"
+# Disable password authentication entirely.
+# Only public key authentication is allowed.
+# This eliminates the entire class of password brute force attacks.
+
+ssh_x11_forwarding: "no"
+# X11 forwarding allows GUI applications to be forwarded over SSH.
+# We do not need this — disabling it reduces attack surface.
+
+ssh_max_auth_tries: 3
+# Disconnect the client after this many failed authentication attempts.
+# Works in combination with fail2ban which bans the IP entirely
+# after repeated failed connections.
+
+ssh_client_alive_interval: 300
+# Send a keepalive packet every 300 seconds (5 minutes).
+# Detects connections that have gone dead (e.g. laptop closed, network
+# dropped) without waiting forever.
+
+ssh_client_alive_count_max: 2
+# Disconnect if this many keepalives go unanswered.
+# At 300s interval × 2 = 10 minutes of idle before disconnect.
+
+ssh_login_grace_time: 30
+# Disconnect unauthenticated connections after 30 seconds.
+# Prevents half-open connections from piling up.
+
+# ── UFW firewall ──────────────────────────────────────────────────
+ufw_ssh_port: "{{ ssh_port }}"
+# Allows SSH through the firewall on the same port defined above.
+# Using a variable reference (not hardcoding "22") means if you
+# change ssh_port above, the firewall rule updates automatically.
+
+# ── fail2ban ──────────────────────────────────────────────────────
+fail2ban_maxretry: 5
+# Ban an IP after this many failed SSH login attempts.
+
+fail2ban_findtime: 600
+# Count failures within this window in seconds (600s = 10 minutes).
+# Failures older than this are forgotten.
+
+fail2ban_bantime: 3600
+# Ban the offending IP for this many seconds (3600s = 1 hour).
+
+# ── sysctl kernel hardening ───────────────────────────────────────
+# These are kernel parameters written to /etc/sysctl.d/
+# They are applied immediately (no reboot needed) and persist
+# across reboots because sysctl.d files are read at boot.
+sysctl_hardening:
+
+  # Reverse path filtering.
+  # Drops packets that arrive on the "wrong" interface.
+  # Example: if a packet claiming to be from 10.0.0.1 arrives on
+  # eth0 but your routing table says 10.0.0.1 is reachable via eth1,
+  # the packet is forged and gets dropped.
+  # Prevents IP spoofing attacks.
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.default.rp_filter: 1
+
+  # Reject ICMP redirect messages.
+  # ICMP redirects can be used to manipulate a host's routing table
+  # — an attacker sends a fake redirect saying "use me as your gateway."
+  # Rejecting them prevents route table poisoning.
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.default.accept_redirects: 0
+  net.ipv6.conf.all.accept_redirects: 0
+
+  # Do not send ICMP redirects.
+  # This host is not a router — it should never be telling other
+  # hosts to change their routes.
+  net.ipv4.conf.all.send_redirects: 0
+  net.ipv4.conf.default.send_redirects: 0
+
+  # Reject source-routed packets.
+  # Source routing lets the sender dictate the path a packet takes
+  # through the network. Legitimate traffic never does this.
+  # An attacker uses it to bypass firewalls by routing around them.
+  net.ipv4.conf.all.accept_source_route: 0
+  net.ipv6.conf.all.accept_source_route: 0
+
+  # Ignore broadcast pings.
+  # Prevents smurf amplification attacks where an attacker pings
+  # the broadcast address, causing all hosts on the network to
+  # reply — flooding the attacker's target with traffic.
+  net.ipv4.icmp_echo_ignore_broadcasts: 1
+
+  # SYN flood protection via SYN cookies.
+  # In a SYN flood the attacker sends thousands of TCP SYN packets
+  # with fake source IPs. Normally the server allocates memory for
+  # each half-open connection and runs out of resources.
+  # SYN cookies encode the connection state in the SYN-ACK response
+  # instead of allocating memory — so the server never fills up.
+  net.ipv4.tcp_syncookies: 1
+
+  # Full ASLR (Address Space Layout Randomisation).
+  # Randomises where code, stack, and heap are placed in memory
+  # on every execution. Exploits that rely on jumping to a known
+  # memory address are broken because the address changes each time.
+  # 0 = disabled, 1 = partial, 2 = full
+  kernel.randomize_va_space: 2
+
+  # Restrict dmesg to root only.
+  # dmesg shows kernel ring buffer messages which can leak hardware
+  # info, memory addresses, and driver details useful for exploitation.
+  # 1 = only root can read dmesg
+  kernel.dmesg_restrict: 1
+
+  # Disable IPv6 system-wide.
+  # We do not use IPv6 in this lab. Disabling it reduces attack surface
+  # and simplifies firewall rules — you only think about IPv4.
+  net.ipv6.conf.all.disable_ipv6: 1
+  net.ipv6.conf.default.disable_ipv6: 1
+  net.ipv6.conf.lo.disable_ipv6: 1
+  # all     = all currently existing interfaces
+  # default = any new interfaces created later (bridges, VMs, etc.)
+  # lo      = the loopback interface (127.0.0.1)
+  # All three must be set to ensure no interface ever gets IPv6
+
+# ── Login banner ──────────────────────────────────────────────────
+motd_banner: |
+  **************************************************************************
+  *              CS3 Cybersecurity Club — Lab Machine                      *
+  *          Authorized use only. All activity is monitored.               *
+  **************************************************************************

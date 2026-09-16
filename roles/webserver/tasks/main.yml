@@ -1,0 +1,27 @@
+---
+# roles/webserver/tasks/main.yml
+# Deploys and configures an Nginx web server.
+# Runs after the hardening role, so UFW is already active.
+# This role adds an HTTP allow rule on top of the existing firewall.
+#
+# Order:
+#   1. packages  — install nginx
+#   2. firewall  — open port 80 BEFORE nginx starts serving traffic
+#   3. configure — write virtual host config and document root
+#   4. service   — ensure nginx is running with the new config
+
+- name: Install Nginx
+  ansible.builtin.include_tasks: packages.yml
+  tags: [webserver, webserver_packages]
+
+- name: Open HTTP port in firewall
+  ansible.builtin.include_tasks: firewall.yml
+  tags: [webserver, webserver_firewall]
+
+- name: Configure Nginx virtual host and content
+  ansible.builtin.include_tasks: configure.yml
+  tags: [webserver, webserver_configure]
+
+- name: Ensure Nginx service is running
+  ansible.builtin.include_tasks: service.yml
+  tags: [webserver, webserver_service]

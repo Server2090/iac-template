@@ -1,0 +1,31 @@
+---
+# ansible-lab/requirements.yml
+# Declares which Ansible collections this project depends on.
+#
+# WHY THIS FILE EXISTS:
+# Even though "apt install ansible" on Kali bundles both of these
+# collections automatically, declaring them here is good practice.
+# It means anyone running this project in a different environment
+# (a minimal ansible-core install, a CI system, a different distro)
+# can install exactly what is needed with one command:
+#
+#   ansible-galaxy collection install -r requirements.yml
+#
+# Collections are namespaced libraries of Ansible modules and plugins.
+# The full module name tells you which collection it lives in:
+#   community.general.ufw  → community.general collection → ufw module
+#   ansible.posix.sysctl   → ansible.posix collection → sysctl module
+#   ansible.builtin.apt    → no install needed, built into ansible-core
+
+collections:
+
+  - name: community.general
+    # Contains: community.general.ufw (firewall rules)
+    # Used by: roles/hardening/tasks/firewall.yml
+    #          roles/webserver/tasks/firewall.yml
+    # Docs: https://docs.ansible.com/ansible/latest/collections/community/general/
+
+  - name: ansible.posix
+    # Contains: ansible.posix.sysctl (kernel parameter management)
+    # Used by: roles/hardening/tasks/sysctl.yml
+    # Docs: https://docs.ansible.com/ansible/latest/collections/ansible/posix/

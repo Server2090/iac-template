@@ -1,0 +1,74 @@
+---
+# roles/webserver/tasks/configure.yml
+# Configures the Nginx virtual host and deploys the web content.
+# Nginx on Debian/Kali uses a sites-available / sites-enabled pattern:
+#   /etc/nginx/sites-available/  = store all site config files here
+#   /etc/nginx/sites-enabled/    = symlink the ones you want active
+# This allows you to write a config without activating it yet,
+# and enable/disable sites by creating/removing symlinks.
+
+- name: Create document root directory
+  ansible.builtin.file:
+    path: "{{ nginx_document_root }}"
+    # The directory Nginx serves files from. From vars/main.yml.
+    state: directory
+    # directory = create it if it does not exist.
+    # If it already exists, do nothing (idempotent).
+    owner: www-data
+    group: www-data
+    # www-data is the user Nginx runs as on Debian/Kali.
+    # The document root must be owned by www-data so Nginx can
+    # read files from it. If the owner is wrong, you get
+    # "403 Forbidden" errors in the browser.
+    mode: "0755"
+    # 0755 = owner can read/write/execute,
+    #        group and others can read/execute.
+    # execute on a directory means "can enter it" — Nginx needs
+    # execute permission on every directory in the path to serve files.
+
+- name: Deploy index.html from template
+  ansible.builtin.template:
+    src: index.html.j2
+    # The Jinja2 template in roles/webserver/templates/
+    dest: "{{ nginx_document_root }}/index.html"
+    owner: www-data
+    group: www-data
+    mode: "0644"
+    # 0644 = owner can read/write, everyone else can read.
+    # Web files should be world-readable so Nginx can serve them.
+  notify: Reload Nginx
+  # Notify the handler to reload Nginx if the page content changed.
+  # "reload" (not "restart") re-reads config and content without
+  # dropping existing connections — better for a live web server.
+
+- name: Write Nginx virtual host config from template
+  ansible.builtin.template:
+    src: nginx_site.conf.j2
+    dest: "/etc/nginx/sites-available/{{ nginx_site_name }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload Nginx
+
+- name: Enable the site by creating a symlink in sites-enabled
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ nginx_site_name }}"
+    # src = the file the symlink points TO (the config in sites-available)
+    dest: "/etc/nginx/sites-enabled/{{ nginx_site_name }}"
+    # dest = where the symlink is created (in sites-enabled)
+    state: link
+    # state: link = create a symbolic link.
+    # Nginx reads all files in sites-enabled/ — the symlink here
+    # makes Nginx load this virtual host config.
+  notify: Reload Nginx
+
+- name: Remove the default Nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+    # absent = delete if it exists. The default Nginx site shows
+    # the "Welcome to nginx" placeholder page on port 80.
+    # Removing it ensures our site is the only one active.
+    # The config in sites-available/default is left untouched —
+    # we only remove the symlink in sites-enabled.
+  notify: Reload Nginx

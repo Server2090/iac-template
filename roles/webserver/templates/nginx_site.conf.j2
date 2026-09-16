@@ -1,0 +1,77 @@
+# /etc/nginx/sites-available/{{ nginx_site_name }}
+# Managed by Ansible — do not edit manually.
+# Changes belong in roles/webserver/vars/main.yml.
+# Apply changes: ansible-playbook site.yml -t webserver_configure
+#
+# This is a Jinja2 template. {{ variable }} is replaced with
+# the value from vars/main.yml when Ansible renders this file.
+
+server {
+    listen {{ nginx_port }};
+    # listen = the port this server block handles.
+    # nginx_port comes from vars/main.yml (default: 80).
+    # Nginx can run multiple server blocks on different ports
+    # or different domain names simultaneously.
+
+    server_name {{ nginx_server_name }};
+    # server_name = the hostname this block responds to.
+    # When a request comes in, Nginx matches the Host header
+    # against all server_name directives and routes to the match.
+    # "_" is the catch-all — matches any hostname.
+
+    root {{ nginx_document_root }};
+    # root = the filesystem directory that maps to the URL root (/).
+    # A request for http://hostname/index.html serves
+    # {{ nginx_document_root }}/index.html from disk.
+
+    index index.html;
+    # index = which file to serve when a directory is requested.
+    # A request for http://hostname/ serves index.html automatically.
+
+    # ── Access logging ───────────────────────────────────────────
+    access_log /var/log/nginx/{{ nginx_site_name }}_access.log;
+    # Logs every request to a site-specific file.
+    # Keeping logs per-site makes it easier to audit a single site.
+
+    error_log /var/log/nginx/{{ nginx_site_name }}_error.log;
+    # Logs errors (404s, 500s, permission denied, etc.) separately.
+
+    # ── Security headers ─────────────────────────────────────────
+    # These HTTP response headers instruct browsers to apply
+    # additional security restrictions. Added by Ansible so they
+    # are consistent across every deployment, not left to chance.
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    # Prevents this page from being embedded in an <iframe> on
+    # another domain. Protects against clickjacking attacks where
+    # an attacker overlays an invisible iframe over their own page.
+
+    add_header X-Content-Type-Options "nosniff";
+    # Tells the browser to trust the Content-Type header and not
+    # try to guess the file type. Prevents MIME-type sniffing
+    # attacks where a browser executes a file as JavaScript because
+    # it "looks like" JS even though it was served as text/plain.
+
+    add_header X-XSS-Protection "1; mode=block";
+    # Enables the browser's built-in XSS (Cross-Site Scripting)
+    # filter and tells it to block the page if an attack is detected.
+    # Modern browsers have this on by default but being explicit
+    # ensures consistency across browser versions.
+
+    server_tokens off;
+    # Hides the Nginx version number from HTTP response headers
+    # and error pages. By default Nginx announces its version
+    # (e.g. "nginx/1.24.0") in every response — useful for
+    # attackers looking for known vulnerabilities in that version.
+
+    # ── Location blocks ──────────────────────────────────────────
+    location / {
+        # The / block handles all requests not matched by a more
+        # specific block. try_files is the standard way to serve
+        # static files with a fallback.
+        try_files $uri $uri/ =404;
+        # 1. Try the exact URI as a file ($uri)
+        # 2. Try the URI as a directory ($uri/)
+        # 3. If neither exists, return a 404 error
+    }
+}

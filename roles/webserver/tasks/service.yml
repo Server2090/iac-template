@@ -1,0 +1,24 @@
+---
+# roles/webserver/tasks/service.yml
+# Ensures Nginx is running and set to start on boot.
+# This task is separate from configure.yml because the service
+# state is a distinct concern from the configuration.
+# Having it last means all config is in place before we
+# declare the service "started" — no moment where Nginx is
+# running with a half-written config.
+
+- name: Ensure Nginx is enabled and running
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    # started = if Nginx is not running, start it.
+    # If it is already running, do nothing (idempotent).
+    # The handler uses "reload" for config changes — this task
+    # only handles the case where Nginx is not running at all.
+    enabled: true
+    # enabled = create the systemd symlink so Nginx starts at boot.
+    daemon_reload: true
+    # daemon_reload: true = run "systemctl daemon-reload" before
+    # checking the service state. This is needed when a new service
+    # unit file has been installed (e.g. by the nginx apt package)
+    # so systemd is aware of it before we try to start it.
