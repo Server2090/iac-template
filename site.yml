@@ -26,7 +26,6 @@
 # needing SSH keys set up.
 - name: Harden the local Kali machine
   hosts: all
-  connection: local
   become: true
   # become: true = run tasks as root (via sudo).
   # Without this, tasks that modify system files will fail
@@ -47,7 +46,6 @@
 # baseline that hardening already set.
 - name: Deploy Nginx web server
   hosts: all
-  connection: local
   become: true
   gather_facts: true
   roles:
